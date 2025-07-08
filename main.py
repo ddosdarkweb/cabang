@@ -27,7 +27,7 @@ def keep_alive():
 # === KONFIGURASI ===
 TOKEN = "8019108696:AAHCA-1aWHkPlnypDDLjXL-Z6OW2kOxhU6I"
 ADMIN_IDS = [1293577945, 5397964203]
-MAKS_IZIN = 10
+MAKS_IZIN = 8
 TIMEZONE = pytz.timezone("Asia/Jakarta")
 IZIN_FILE = "izin.json"
 
