@@ -25,8 +25,8 @@ def keep_alive():
     thread.start()
 
 # === KONFIGURASI BOT ===
-TOKEN = "ISI_TOKEN_BOT_KAMU_DISINI"
-ADMIN_IDS = [5397964203, 1293577945]  # Ganti sesuai admin kamu
+TOKEN = "8019108696:AAHCA-1aWHkPlnypDDLjXL-Z6OW2kOxhU6I"
+ADMIN_IDS = [1293577945, 5397964203]
 MAKS_IZIN = 10
 TIMEZONE = pytz.timezone("Asia/Jakarta")
 IZIN_FILE = "izin.json"
@@ -42,7 +42,6 @@ DURASI = {
 izin_aktif = {}
 last_kembali_uid = None
 
-# === SIMPAN & LOAD DATA ===
 def simpan_data():
     with open(IZIN_FILE, "w") as f:
         json.dump(izin_aktif, f, indent=2, default=str)
@@ -60,7 +59,6 @@ def load_data():
                     "kembali": datetime.fromisoformat(data["kembali"])
                 }
 
-# === KIRIM PESAN KE ADMIN ===
 async def kirim_ke_admins(context: ContextTypes.DEFAULT_TYPE, pesan: str):
     for admin_id in ADMIN_IDS:
         try:
@@ -68,7 +66,6 @@ async def kirim_ke_admins(context: ContextTypes.DEFAULT_TYPE, pesan: str):
         except Exception as e:
             print(f"Gagal kirim ke admin {admin_id}: {e}")
 
-# === MENU IZIN ===
 async def show_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [InlineKeyboardButton("🍽️ Makan", callback_data='izin_makan'),
@@ -81,7 +78,6 @@ async def show_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
-# === HANDLE IZIN ===
 async def handle_izin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -124,7 +120,6 @@ async def handle_izin(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"📤 {user.first_name} keluar untuk {alasan} pukul {now.strftime('%H:%M')} WIB."
     )
 
-# === HANDLE KEMBALI MANUAL ===
 async def handle_kembali(update: Update, context: ContextTypes.DEFAULT_TYPE):
     global last_kembali_uid
 
@@ -167,7 +162,6 @@ async def handle_kembali(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(chat_id=query.message.chat_id, text=pesan)
     await kirim_ke_admins(context, pesan)
 
-# === AUTO KEMBALI JIKA TELAT 10 MENIT ===
 async def auto_kembali(context: ContextTypes.DEFAULT_TYPE):
     now = datetime.now(TIMEZONE)
     auto_done = []
@@ -194,14 +188,12 @@ async def auto_kembali(context: ContextTypes.DEFAULT_TYPE):
     if auto_done:
         simpan_data()
 
-# === OPSIONAL ===
 async def get_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"ID kamu: `{update.effective_user.id}`", parse_mode="Markdown")
 
 async def tes_kirim_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await kirim_ke_admins(context, "📢 Tes kirim ke semua admin berhasil!")
 
-# === MAIN ===
 def main():
     load_data()
     app_bot = ApplicationBuilder().token(TOKEN).post_init(lambda app: app.job_queue).build()
@@ -213,13 +205,11 @@ def main():
     app_bot.add_handler(CallbackQueryHandler(handle_izin, pattern="^izin_"))
     app_bot.add_handler(CallbackQueryHandler(handle_kembali, pattern="^in_"))
 
-    # Auto check izin tiap 60 detik
     app_bot.job_queue.run_repeating(auto_kembali, interval=60, first=10)
 
-    print("✅ BOT AKTIF: dengan izin keluar, kembali, dan denda")
+    print("✅ BOT AKTIF: @webcabang_bot")
     keep_alive()
     app_bot.run_polling()
 
 if __name__ == "__main__":
     main()
-
