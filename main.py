@@ -94,7 +94,7 @@ async def handle_izin(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if len(izin_aktif) >= MAKS_IZIN:
-        await query.message.reply_text("❌ Maksimal 10 orang boleh izin bersamaan.")
+        await query.message.reply_text("❌ Maksimal 5 orang boleh izin bersamaan.")
         return
 
     now = datetime.now(TIMEZONE)
@@ -111,7 +111,6 @@ async def handle_izin(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("✅ Saya Sudah Kembali", callback_data=f"in_{uid}")]
     ])
 
-    # Kirim pesan izin + tombol ke grup/chat aktif
     await context.bot.send_message(
         chat_id=query.message.chat_id,
         text=(
@@ -125,7 +124,7 @@ async def handle_izin(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"📤 {user.first_name} keluar untuk {alasan} pukul {now.strftime('%H:%M')} WIB."
     )
 
-# === HANDLE KEMBALI MANUAL ===
+# === HANDLE KEMBALI ===
 async def handle_kembali(update: Update, context: ContextTypes.DEFAULT_TYPE):
     global last_kembali_uid
 
@@ -135,7 +134,10 @@ async def handle_kembali(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = str(user.id)
     now = datetime.now(TIMEZONE)
 
+    print(f"✅ Tombol kembali diklik oleh {user.first_name} ({uid})")
+
     if uid == last_kembali_uid:
+        print("⏹️ Duplikat klik tombol kembali - diabaikan")
         return
     last_kembali_uid = uid
 
@@ -168,7 +170,7 @@ async def handle_kembali(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(chat_id=query.message.chat_id, text=pesan)
     await kirim_ke_admins(context, pesan)
 
-# === AUTO KEMBALI JIKA LEBIH 10 MENIT ===
+# === AUTO KEMBALI ===
 async def auto_kembali(context: ContextTypes.DEFAULT_TYPE):
     now = datetime.now(TIMEZONE)
     auto_done = []
@@ -212,9 +214,8 @@ def main():
     app_bot.add_handler(CommandHandler("tesadmin", tes_kirim_admin))
     app_bot.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, show_menu))
     app_bot.add_handler(CallbackQueryHandler(handle_izin, pattern="^izin_"))
-    app_bot.add_handler(CallbackQueryHandler(handle_kembali, pattern="^in_"))
+    app_bot.add_handler(CallbackQueryHandler(handle_kembali, pattern="^in_.*$"))  # ← FIX
 
-    # Auto check izin tiap 60 detik
     app_bot.job_queue.run_repeating(auto_kembali, interval=60, first=10)
 
     print("✅ BOT AKTIF: dengan izin keluar, kembali, dan denda")
