@@ -25,7 +25,7 @@ def keep_alive():
     thread.start()
 
 # === KONFIGURASI BOT ===
-TOKEN = "8019108696:AAHCA-1aWHkPlnypDDLjXL-Z6OW2kOxhU6I"
+TOKEN = "ISI_TOKEN_BOT_KAMU_DISINI"
 ADMIN_IDS = [5397964203, 1293577945]  # Ganti sesuai admin kamu
 MAKS_IZIN = 10
 TIMEZONE = pytz.timezone("Asia/Jakarta")
@@ -167,7 +167,7 @@ async def handle_kembali(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(chat_id=query.message.chat_id, text=pesan)
     await kirim_ke_admins(context, pesan)
 
-# === AUTO KEMBALI JIKA LEBIH 10 MENIT ===
+# === AUTO KEMBALI JIKA TELAT 10 MENIT ===
 async def auto_kembali(context: ContextTypes.DEFAULT_TYPE):
     now = datetime.now(TIMEZONE)
     auto_done = []
@@ -194,17 +194,21 @@ async def auto_kembali(context: ContextTypes.DEFAULT_TYPE):
     if auto_done:
         simpan_data()
 
-# === COMMAND TAMBAHAN ===
+# === OPSIONAL ===
 async def get_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"ID kamu: `{update.effective_user.id}`", parse_mode="Markdown")
+
+async def tes_kirim_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await kirim_ke_admins(context, "📢 Tes kirim ke semua admin berhasil!")
 
 # === MAIN ===
 def main():
     load_data()
-    app_bot = ApplicationBuilder().token(TOKEN).build()
+    app_bot = ApplicationBuilder().token(TOKEN).post_init(lambda app: app.job_queue).build()
 
     app_bot.add_handler(CommandHandler("start", show_menu))
     app_bot.add_handler(CommandHandler("id", get_id))
+    app_bot.add_handler(CommandHandler("tesadmin", tes_kirim_admin))
     app_bot.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, show_menu))
     app_bot.add_handler(CallbackQueryHandler(handle_izin, pattern="^izin_"))
     app_bot.add_handler(CallbackQueryHandler(handle_kembali, pattern="^in_"))
@@ -212,9 +216,10 @@ def main():
     # Auto check izin tiap 60 detik
     app_bot.job_queue.run_repeating(auto_kembali, interval=60, first=10)
 
-    print("✅ BOT AKTIF: Siap menerima izin & denda otomatis")
+    print("✅ BOT AKTIF: dengan izin keluar, kembali, dan denda")
     keep_alive()
     app_bot.run_polling()
 
 if __name__ == "__main__":
     main()
+
