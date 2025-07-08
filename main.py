@@ -25,7 +25,7 @@ def keep_alive():
     thread.start()
 
 # === KONFIGURASI BOT ===
-TOKEN = "8019108696:AAHCA-1aWHkPlnypDDLjXL-Z6OW2kOxhU6I"
+TOKEN = "GANTI_DENGAN_TOKEN_KAMU"
 ADMIN_IDS = [5397964203, 1293577945]  # Ganti sesuai admin kamu
 MAKS_IZIN = 5
 TIMEZONE = pytz.timezone("Asia/Jakarta")
@@ -137,7 +137,6 @@ async def handle_kembali(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print(f"✅ Tombol kembali diklik oleh {user.first_name} ({uid})")
 
     if uid == last_kembali_uid:
-        print("⏹️ Duplikat klik tombol kembali - diabaikan")
         return
     last_kembali_uid = uid
 
@@ -214,7 +213,7 @@ def main():
     app_bot.add_handler(CommandHandler("tesadmin", tes_kirim_admin))
     app_bot.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, show_menu))
     app_bot.add_handler(CallbackQueryHandler(handle_izin, pattern="^izin_"))
-    app_bot.add_handler(CallbackQueryHandler(handle_kembali, pattern="^in_.*$"))  # ← FIX
+    app_bot.add_handler(CallbackQueryHandler(handle_kembali, pattern="^in_.*$"))  # FIXED
 
     app_bot.job_queue.run_repeating(auto_kembali, interval=60, first=10)
 
