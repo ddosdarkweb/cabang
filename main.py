@@ -10,7 +10,7 @@ from flask import Flask
 import threading
 import os
 
-# === FLASK UNTUK KEEP ALIVE ===
+# === FLASK KEEP ALIVE ===
 app = Flask('')
 
 @app.route('/')
@@ -25,13 +25,13 @@ def keep_alive():
     thread.start()
 
 # === KONFIGURASI BOT ===
-TOKEN = "GANTI_DENGAN_TOKEN_KAMU"
+TOKEN = "ISI_TOKEN_BOT_KAMU"
 ADMIN_IDS = [5397964203, 1293577945]  # Ganti sesuai admin kamu
 MAKS_IZIN = 5
 TIMEZONE = pytz.timezone("Asia/Jakarta")
 IZIN_FILE = "izin.json"
 
-# === DURASI DEFAULT PER JENIS IZIN (MENIT) ===
+# === DURASI DEFAULT (MENIT) ===
 DURASI = {
     "makan": 20,
     "merokok": 10,
@@ -42,7 +42,7 @@ DURASI = {
 izin_aktif = {}
 last_kembali_uid = None
 
-# === SIMPAN & LOAD DATA ===
+# === SIMPAN / LOAD IZIN ===
 def simpan_data():
     with open(IZIN_FILE, "w") as f:
         json.dump(izin_aktif, f, indent=2, default=str)
@@ -60,7 +60,7 @@ def load_data():
                     "kembali": datetime.fromisoformat(data["kembali"])
                 }
 
-# === KIRIM PESAN KE ADMIN ===
+# === KIRIM KE ADMIN ===
 async def kirim_ke_admins(context: ContextTypes.DEFAULT_TYPE, pesan: str):
     for admin_id in ADMIN_IDS:
         try:
@@ -113,10 +113,8 @@ async def handle_izin(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await context.bot.send_message(
         chat_id=query.message.chat_id,
-        text=(
-            f"✅ {user.first_name} izin {alasan} pukul {now.strftime('%H:%M')} WIB.\n"
-            f"⏳ Estimasi kembali: {kembali.strftime('%H:%M')}"
-        ),
+        text=(f"✅ {user.first_name} izin {alasan} pukul {now.strftime('%H:%M')} WIB.\n"
+              f"⏳ Estimasi kembali: {kembali.strftime('%H:%M')}"),
         reply_markup=tombol_kembali
     )
 
@@ -133,8 +131,6 @@ async def handle_kembali(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = query.from_user
     uid = str(user.id)
     now = datetime.now(TIMEZONE)
-
-    print(f"✅ Tombol kembali diklik oleh {user.first_name} ({uid})")
 
     if uid == last_kembali_uid:
         return
@@ -169,12 +165,12 @@ async def handle_kembali(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(chat_id=query.message.chat_id, text=pesan)
     await kirim_ke_admins(context, pesan)
 
-# === AUTO KEMBALI ===
+# === CEK OTOMATIS TERLAMBAT ===
 async def auto_kembali(context: ContextTypes.DEFAULT_TYPE):
     now = datetime.now(TIMEZONE)
     auto_done = []
 
-    for uid, data in izin_aktif.items():
+    for uid, data in list(izin_aktif.items()):
         if now > data['kembali'] + timedelta(minutes=10):
             keluar = data['keluar']
             nama = data['nama']
@@ -183,7 +179,7 @@ async def auto_kembali(context: ContextTypes.DEFAULT_TYPE):
             denda = 500000
 
             pesan = (
-                f"⚠️ {nama} belum kembali sesuai estimasi dan dianggap kembali otomatis.\n"
+                f"⚠️ {nama} belum kembali dan dianggap kembali otomatis.\n"
                 f"⏱️ Durasi izin: {str(durasi).split('.')[0]}\n"
                 f"💸 Denda: Rp{denda:,}"
             )
@@ -213,11 +209,12 @@ def main():
     app_bot.add_handler(CommandHandler("tesadmin", tes_kirim_admin))
     app_bot.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, show_menu))
     app_bot.add_handler(CallbackQueryHandler(handle_izin, pattern="^izin_"))
-    app_bot.add_handler(CallbackQueryHandler(handle_kembali, pattern="^in_.*$"))  # FIXED
+    app_bot.add_handler(CallbackQueryHandler(handle_kembali, pattern="^in_"))
 
-    app_bot.job_queue.run_repeating(auto_kembali, interval=60, first=10)
+    job_queue = app_bot.job_queue
+    job_queue.run_repeating(auto_kembali, interval=60, first=10)
 
-    print("✅ BOT AKTIF: dengan izin keluar, kembali, dan denda")
+    print("✅ BOT AKTIF 24 JAM!")
     keep_alive()
     app_bot.run_polling()
 
