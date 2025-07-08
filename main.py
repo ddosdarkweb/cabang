@@ -1,37 +1,22 @@
-from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     ApplicationBuilder, CommandHandler, CallbackQueryHandler,
     MessageHandler, ContextTypes, filters
 )
 from datetime import datetime, timedelta
-import pytz
-import json
 from flask import Flask
 import threading
+import pytz
+import json
 import os
 
-# === FLASK UNTUK KEEP ALIVE ===
-app = Flask('')
-
-@app.route('/')
-def home():
-    return "Bot aktif 24 jam!"
-
-def run():
-    app.run(host='0.0.0.0', port=8080)
-
-def keep_alive():
-    thread = threading.Thread(target=run)
-    thread.start()
-
-# === KONFIGURASI BOT ===
+# === CONFIG ===
 TOKEN = "8019108696:AAHCA-1aWHkPlnypDDLjXL-Z6OW2kOxhU6I"
 ADMIN_IDS = [1293577945, 5397964203]
-MAKS_IZIN = 10
+MAKS_IZIN = 5
 TIMEZONE = pytz.timezone("Asia/Jakarta")
 IZIN_FILE = "izin.json"
 
-# === DURASI DEFAULT PER JENIS IZIN (MENIT) ===
 DURASI = {
     "makan": 20,
     "merokok": 10,
@@ -42,6 +27,21 @@ DURASI = {
 izin_aktif = {}
 last_kembali_uid = None
 
+# === FLASK KEEP ALIVE ===
+app = Flask('')
+
+@app.route('/')
+def home():
+    return "Bot aktif 24 jam!"
+
+def run():
+    app.run(host='0.0.0.0', port=8080)
+
+def keep_alive():
+    t = threading.Thread(target=run)
+    t.start()
+
+# === SIMPAN / LOAD DATA ===
 def simpan_data():
     with open(IZIN_FILE, "w") as f:
         json.dump(izin_aktif, f, indent=2, default=str)
@@ -59,13 +59,15 @@ def load_data():
                     "kembali": datetime.fromisoformat(data["kembali"])
                 }
 
-async def kirim_ke_admins(context: ContextTypes.DEFAULT_TYPE, pesan: str):
+# === KIRIM PESAN KE ADMIN ===
+async def kirim_ke_admins(context, pesan):
     for admin_id in ADMIN_IDS:
         try:
             await context.bot.send_message(chat_id=admin_id, text=pesan)
-        except Exception as e:
-            print(f"Gagal kirim ke admin {admin_id}: {e}")
+        except:
+            pass
 
+# === MENU IZIN ===
 async def show_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [InlineKeyboardButton("🍽️ Makan", callback_data='izin_makan'),
@@ -73,11 +75,10 @@ async def show_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("🚽 Toilet", callback_data='izin_toilet'),
          InlineKeyboardButton("💩 BAB", callback_data='izin_bab')]
     ]
-    await update.message.reply_text(
-        "Silakan pilih jenis izin keluar:",
-        reply_markup=InlineKeyboardMarkup(keyboard)
-    )
+    await update.message.reply_text("Silakan pilih jenis izin keluar:",
+        reply_markup=InlineKeyboardMarkup(keyboard))
 
+# === HANDLE IZIN ===
 async def handle_izin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -90,7 +91,7 @@ async def handle_izin(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if len(izin_aktif) >= MAKS_IZIN:
-        await query.message.reply_text("❌ Maksimal 10 orang boleh izin bersamaan.")
+        await query.message.reply_text("❌ Maksimal 10 orang izin bersamaan.")
         return
 
     now = datetime.now(TIMEZONE)
@@ -103,23 +104,20 @@ async def handle_izin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     }
     simpan_data()
 
-    tombol_kembali = InlineKeyboardMarkup([
+    tombol = InlineKeyboardMarkup([
         [InlineKeyboardButton("✅ Saya Sudah Kembali", callback_data=f"in_{uid}")]
     ])
 
     await context.bot.send_message(
         chat_id=query.message.chat_id,
-        text=(
-            f"✅ {user.first_name} izin {alasan} pukul {now.strftime('%H:%M')} WIB.\n"
-            f"⏳ Estimasi kembali: {kembali.strftime('%H:%M')}"
-        ),
-        reply_markup=tombol_kembali
+        text=f"✅ {user.first_name} izin {alasan} pukul {now.strftime('%H:%M')} WIB.\n"
+             f"⏳ Estimasi kembali: {kembali.strftime('%H:%M')}",
+        reply_markup=tombol
     )
 
-    await kirim_ke_admins(context,
-        f"📤 {user.first_name} keluar untuk {alasan} pukul {now.strftime('%H:%M')} WIB."
-    )
+    await kirim_ke_admins(context, f"📤 {user.first_name} keluar untuk {alasan} pukul {now.strftime('%H:%M')} WIB.")
 
+# === HANDLE KEMBALI ===
 async def handle_kembali(update: Update, context: ContextTypes.DEFAULT_TYPE):
     global last_kembali_uid
 
@@ -162,6 +160,7 @@ async def handle_kembali(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(chat_id=query.message.chat_id, text=pesan)
     await kirim_ke_admins(context, pesan)
 
+# === AUTO KEMBALI ===
 async def auto_kembali(context: ContextTypes.DEFAULT_TYPE):
     now = datetime.now(TIMEZONE)
     auto_done = []
@@ -179,7 +178,6 @@ async def auto_kembali(context: ContextTypes.DEFAULT_TYPE):
                 f"⏱️ Durasi izin: {str(durasi).split('.')[0]}\n"
                 f"💸 Denda: Rp{denda:,}"
             )
-
             await kirim_ke_admins(context, pesan)
             auto_done.append(uid)
 
@@ -188,26 +186,24 @@ async def auto_kembali(context: ContextTypes.DEFAULT_TYPE):
     if auto_done:
         simpan_data()
 
+# === GET ID ===
 async def get_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"ID kamu: `{update.effective_user.id}`", parse_mode="Markdown")
 
-async def tes_kirim_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await kirim_ke_admins(context, "📢 Tes kirim ke semua admin berhasil!")
-
+# === MAIN ===
 def main():
     load_data()
-    app_bot = ApplicationBuilder().token(TOKEN).post_init(lambda app: app.job_queue).build()
+    app_bot = ApplicationBuilder().token(TOKEN).build()
 
     app_bot.add_handler(CommandHandler("start", show_menu))
     app_bot.add_handler(CommandHandler("id", get_id))
-    app_bot.add_handler(CommandHandler("tesadmin", tes_kirim_admin))
     app_bot.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, show_menu))
     app_bot.add_handler(CallbackQueryHandler(handle_izin, pattern="^izin_"))
     app_bot.add_handler(CallbackQueryHandler(handle_kembali, pattern="^in_"))
 
     app_bot.job_queue.run_repeating(auto_kembali, interval=60, first=10)
 
-    print("✅ BOT AKTIF: @webcabang_bot")
+    print("✅ BOT AKTIF")
     keep_alive()
     app_bot.run_polling()
 
