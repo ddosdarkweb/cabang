@@ -27,7 +27,7 @@ def keep_alive():
 # === KONFIGURASI BOT ===
 TOKEN = "8019108696:AAHCA-1aWHkPlnypDDLjXL-Z6OW2kOxhU6I"
 ADMIN_IDS = [5397964203, 1293577945]  # Ganti sesuai admin kamu
-MAKS_IZIN = 10
+MAKS_IZIN = 5
 TIMEZONE = pytz.timezone("Asia/Jakarta")
 IZIN_FILE = "izin.json"
 
