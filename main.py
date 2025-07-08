@@ -10,12 +10,12 @@ from flask import Flask
 import threading
 import os
 
-# === FLASK KEEP ALIVE ===
+# === FLASK UNTUK KEEP ALIVE ===
 app = Flask('')
 
 @app.route('/')
 def home():
-    return "Bot aktif 24 jam!"
+    return "✅ Bot @webcabang_bot aktif 24 jam!"
 
 def run():
     app.run(host='0.0.0.0', port=8080)
@@ -26,11 +26,12 @@ def keep_alive():
 
 # === KONFIGURASI BOT ===
 TOKEN = "8019108696:AAHCA-1aWHkPlnypDDLjXL-Z6OW2kOxhU6I"
-ADMIN_IDS = [1293577945, 5397964203]
-MAKS_IZIN = 5
+ADMIN_IDS = [5397964203, 1293577945]
+MAKS_IZIN = 5  # ✅ Ubah jadi 5 orang
 TIMEZONE = pytz.timezone("Asia/Jakarta")
 IZIN_FILE = "izin.json"
 
+# === DURASI DEFAULT (MENIT) ===
 DURASI = {
     "makan": 20,
     "merokok": 10,
@@ -108,8 +109,10 @@ async def handle_izin(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await context.bot.send_message(
         chat_id=query.message.chat_id,
-        text=(f"✅ {user.first_name} izin {alasan} pukul {now.strftime('%H:%M')} WIB.\n"
-              f"⏳ Estimasi kembali: {kembali.strftime('%H:%M')}"),
+        text=(
+            f"✅ {user.first_name} izin {alasan} pukul {now.strftime('%H:%M')} WIB.\n"
+            f"⏳ Estimasi kembali: {kembali.strftime('%H:%M')}"
+        ),
         reply_markup=tombol_kembali
     )
 
@@ -176,7 +179,6 @@ async def auto_kembali(context: ContextTypes.DEFAULT_TYPE):
                 f"⏱️ Durasi izin: {str(durasi).split('.')[0]}\n"
                 f"💸 Denda: Rp{denda:,}"
             )
-
             await kirim_ke_admins(context, pesan)
             auto_done.append(uid)
 
@@ -188,24 +190,19 @@ async def auto_kembali(context: ContextTypes.DEFAULT_TYPE):
 async def get_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"ID kamu: `{update.effective_user.id}`", parse_mode="Markdown")
 
-async def tes_kirim_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await kirim_ke_admins(context, "📢 Tes kirim ke semua admin berhasil!")
-
 def main():
     load_data()
     app_bot = ApplicationBuilder().token(TOKEN).build()
 
     app_bot.add_handler(CommandHandler("start", show_menu))
     app_bot.add_handler(CommandHandler("id", get_id))
-    app_bot.add_handler(CommandHandler("tesadmin", tes_kirim_admin))
     app_bot.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, show_menu))
     app_bot.add_handler(CallbackQueryHandler(handle_izin, pattern="^izin_"))
     app_bot.add_handler(CallbackQueryHandler(handle_kembali, pattern="^in_"))
 
-    job_queue = app_bot.job_queue
-    job_queue.run_repeating(auto_kembali, interval=60, first=10)
+    app_bot.job_queue.run_repeating(auto_kembali, interval=60, first=10)
 
-    print("✅ BOT AKTIF: webcabang_bot")
+    print("✅ BOT AKTIF: @webcabang_bot (maksimal 5 orang keluar)")
     keep_alive()
     app_bot.run_polling()
 
